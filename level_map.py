@@ -1,9 +1,9 @@
 import pygame
 from data1 import levels
-#dd
+
 
 class Node(pygame.sprite.Sprite):
-    def __init__(self, pos, status):
+    def __init__(self, pos, status, dot_speed):
         super().__init__()
         self.image = pygame.Surface((100, 80))
         if status == 'available':
@@ -11,23 +11,31 @@ class Node(pygame.sprite.Sprite):
         else:
             self.image.fill('blue')
         self.rect = self.image.get_rect(center = pos)
+        self.detection_zone = pygame.Rect(self.rect.centerx - (dot_speed / 2), self.rect.centery - (dot_speed / 2), dot_speed, dot_speed)
 
 class Dot(pygame.sprite.Sprite):
     def __init__(self, pos):
         super().__init__()
+        self.pos = pos
         self.image = pygame.Surface((20, 20))
         self.image.fill('white')
         self.rect = self.image.get_rect(center = pos)
 
+    def update(self):
+        self.rect.center = self.pos
+
 
 class Level_map:
     def __init__(self, start_level, max_level, surface):
-        #setup
+
         self.display_surface = surface
         self.max_level =  max_level
         self.current_level = start_level
 
-        #sprites
+        self.moving = False
+        self.move_direction = pygame.math.Vector2(0, 0)
+        self.speed = 8
+
         self.setup_nodes()
         self.setup_dot()
 
@@ -52,18 +60,35 @@ class Level_map:
 
     def input(self):
         keys = pygame.key.get_pressed()
+        if not self.moving:
+            if keys[pygame.K_RIGHT] and self.current_level < self.max_level:
+                self.move_direction = self.get_movement_data('next')
+                self.current_level += 1
+                self.moving = True
+            elif keys[pygame.K_LEFT] and self.current_level > 0:
+                self.move_direction = self.get_movement_data('previous')
+                self.current_level -= 1
+                self.moving = True
 
-        if keys[pygame.K_RIGHT] and self.current_level < self.max_level:
-            self.current_level += 1
-        elif keys[pygame.K_LEFT] and self.current_level > 0:
-            self.current_level -= 1
+    def get_movement_data(self, target):
+        start = pygame.math.Vector2(self.nodes.sprites()[self.current_level].rect.center)
+
+        if target == 'next':
+            end = pygame.math.Vector2(self.nodes.sprites()[self.current_level + 1].rect.center)
+        else:
+            end = pygame.math.Vector2(self.nodes.sprites()[self.current_level - 1].rect.center)
+
+        return (end - start).normalize()
 
     def update_dot_pos(self):
-        self.dot.sprite.rect.center = self.nodes.sprites()[self.current_level].rect.center
+        if self.moving and self.move_direction:
+            self.dot.sprite.pos += self.move_direction * self.speed
+            target_node = self.nodes.sprites()[self.current_level]
 
     def run(self):
         self.input()
         self.update_dot_pos()
+        self.dot.update()
         self.draw_the_paths()
         self.nodes.draw(self.display_surface)
         self.dot.draw(self.display_surface)
