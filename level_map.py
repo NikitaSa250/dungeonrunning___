@@ -26,11 +26,12 @@ class Dot(pygame.sprite.Sprite):
 
 
 class Level_map:
-    def __init__(self, start_level, max_level, surface):
+    def __init__(self, start_level, max_level, surface, create_level):
 
         self.display_surface = surface
         self.max_level =  max_level
         self.current_level = start_level
+        self.create_level = create_level
 
         self.moving = False
         self.move_direction = pygame.math.Vector2(0, 0)
@@ -44,9 +45,9 @@ class Level_map:
 
         for index, node_data in enumerate(levels.values()):
             if index <= self.max_level:
-                node_sprite = Node(node_data['node_pos'], 'available')
+                node_sprite = Node(node_data['node_pos'], 'available', self.speed)
             else:
-                node_sprite = Node(node_data['node_pos'], 'unavailable')
+                node_sprite = Node(node_data['node_pos'], 'unavailable', self.speed)
             self.nodes.add(node_sprite)
 
     def draw_the_paths(self):
@@ -69,6 +70,8 @@ class Level_map:
                 self.move_direction = self.get_movement_data('previous')
                 self.current_level -= 1
                 self.moving = True
+            elif keys[pygame.K_SPACE]:
+                self.create_level(self.current_level)
 
     def get_movement_data(self, target):
         start = pygame.math.Vector2(self.nodes.sprites()[self.current_level].rect.center)
@@ -84,6 +87,9 @@ class Level_map:
         if self.moving and self.move_direction:
             self.dot.sprite.pos += self.move_direction * self.speed
             target_node = self.nodes.sprites()[self.current_level]
+            if target_node.detection_zone.collidepoint(self.dot.sprite.pos):
+                self.moving = False
+                self.move_direction = pygame.math.Vector2(0, 0)
 
     def run(self):
         self.input()
